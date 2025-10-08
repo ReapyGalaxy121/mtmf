@@ -1,0 +1,435 @@
+🌱 MintThisMF — System Lifecycle Specification
+
+Goal:
+Provide a unified, correct-by-construction lifecycle map for the MintThisMF system: installation → initialization → operation → minting → completion → maintenance.
+
+🧩 1. High-Level Architecture Overview
++-------------------------+
+|      CLI / UI Layer     |  <-- clap / egui
++-----------+-------------+
+            |
+            v
++-------------------------+
+|      Core Orchestrator  |  <-- mtmf_core
+| (commands, profiles, io)|
++-----------+-------------+
+            |
+            +------------------------------------+
+            |                                    |
+            v                                    v
++---------------------+              +----------------------+
+|   Storage Adapter   |              |   Blockchain Adapter |
+|  (IPFS / Arweave)   |              |  (Flow / API Mode)   |
++---------------------+              +----------------------+
+            |                                    |
+            +----------------+-------------------+
+                             v
+                     +----------------+
+                     |  Config & Keys |
+                     | (.config/mtmf) |
+                     +----------------+
+
+🔁 2. System Lifecycle Stages
+
+Each lifecycle stage is a state machine with transitions and guard conditions.
+
+Stage 0 — Installation
+
+Triggers:
+
+User installs binary (cargo install mtmf or downloads release).
+
+Process:
+
+Binary placed in PATH.
+
+First run triggers bootstrap check:
+
+Detect config existence.
+
+Detect default directories (directories crate).
+
+Verify Rust runtime dependencies (Tokio, etc.).
+
+Output State:
+Installed → Not Initialized
+
+Stage 1 — Initialization / Onboarding
+
+Entry Commands:
+
+mtmf init (CLI)
+
+mtmf --ui (UI Wizard)
+
+Core Steps:
+
+Check for existing config (~/.config/mtmf/config.toml).
+
+If missing → run interactive wizard:
+
+Choose mode (self_custodial | managed).
+
+Choose network (testnet | mainnet).
+
+Choose storage (ipfs | arweave).
+
+If self_custodial:
+
+Generate ECDSA_P256 keypair.
+
+Encrypt & store with aes-gcm.
+
+Offer public key → show faucet link.
+
+If managed:
+
+Prompt for API key.
+
+Validate via ping endpoint.
+
+Write config to disk with versioned schema.
+
+State Transition:
+
+Not Initialized ──mtmf init──> Initialized (Profile Ready)
+
+
+Artifacts Created:
+
+config.toml
+
+/keys/mtmf-<alias>.enc
+
+/logs/mtmf.log
+
+Stage 2 — Profile & Config Management
+
+Triggered By:
+
+mtmf profile list|use|edit
+
+mtmf config print
+
+UI Settings tab
+
+Processes:
+
+Parse config.toml via serde.
+
+Resolve env vars overrides.
+
+Validate required fields:
+
+Flow Access Node URL.
+
+Storage driver tokens.
+
+Signing key alias presence.
+
+On success → cache in-memory.
+
+On edit → atomic write (tmp file → replace).
+
+State:
+Initialized → Ready
+
+Stage 3 — Media Preparation
+
+Triggered By:
+
+mtmf mint <image> or UI drag-drop.
+
+Process:
+
+Validate file path & MIME type.
+
+Hash content (SHA-256).
+
+Lookup in cache (content hash table).
+
+If already uploaded, reuse URL.
+
+If new → upload via configured backend.
+
+Storage Adapter Pathways:
+
+Storage	Crate	Flow
+IPFS	reqwest → nft.storage API	upload → get CID
+Arweave	arloader / arrs	chunk upload → TXID
+Custom	pluggable trait	user-provided endpoint
+
+State Transition:
+
+Ready ──upload──> Uploaded (Media URL Ready)
+
+Stage 4 — Metadata Construction
+
+Triggered By: after successful upload.
+
+Process:
+
+Create Flow-compatible metadata struct:
+
+struct Metadata {
+    name: String,
+    description: String,
+    thumbnail: String,     // ipfs:// or https://
+    attributes: HashMap<String, String>,
+    royalties: Vec<Royalty>,
+}
+
+
+Validate schema with JSON schema validator (jsonschema crate).
+
+Build Cadence argument object for Flow transaction or API payload.
+
+Store ephemeral metadata.json in temp dir.
+
+State Transition:
+
+Uploaded → Metadata Ready
+
+Stage 5 — Transaction Construction & Signing
+
+Triggered By: mtmf mint or UI "Mint" click.
+
+Paths:
+
+A) Self-Custodial:
+
+Load encrypted private key from keyring.
+
+Decrypt using user passphrase.
+
+Build Cadence transaction:
+
+Template: /templates/mint.cdc
+
+Fill placeholders (metadata, recipient, royalties).
+
+Sign using:
+
+ECDSA_P256 (p256 crate)
+
+Hashing: SHA3_256 (sha3 crate)
+
+Serialize transaction to protobuf (Flow Access API schema).
+
+B) Managed (API mode):
+
+Construct payload for provider endpoint (Crossmint/Tatum).
+
+Sign HTTP request with Bearer API key.
+
+State Transition:
+
+Metadata Ready ──sign──> Transaction Built
+
+Stage 6 — Submission to Network
+
+Process (self-custodial):
+
+Send transaction via tonic gRPC client to Flow Access Node.
+
+Receive TxID.
+
+Poll for seal event every 1s using exponential backoff.
+
+Capture events (minted ID, recipient, result).
+
+Process (managed):
+
+Send HTTP POST → /mint endpoint.
+
+Receive transaction hash & status.
+
+Poll via provider /status endpoint.
+
+Outputs:
+
+TxID / Minted NFT ID
+
+Flowscan URL
+
+JSON summary
+
+State Transition:
+
+Transaction Built ──submit──> Pending ──seal──> Minted
+
+Stage 7 — Confirmation & Post-Processing
+
+On Seal Success:
+
+Cache minted artifact metadata in local DB (sled or JSON index):
+
+{
+  "txid": "...",
+  "token_id": "42",
+  "name": "Skelly #1",
+  "recipient": "0xabc...",
+  "image": "ipfs://bafy...",
+  "timestamp": 1733640000
+}
+
+
+Print / display:
+
+“✅ Mint Successful”
+
+“Token ID: 42”
+
+“View: https://flowscan.org/tx/xxxx”
+
+Log success event in telemetry.
+
+On Failure:
+
+Retry limited times.
+
+If persistent → write crash report.
+
+UI: show red banner + “Open Log”.
+
+State Transition:
+
+Minted → Completed
+or
+Pending → Failed
+
+Stage 8 — Maintenance / Diagnostics
+
+Triggered By:
+
+mtmf doctor
+
+Background heartbeat (optional telemetry)
+
+Checks:
+
+Config integrity.
+
+Storage connectivity (HEAD ping).
+
+Flow Access Node status.
+
+Disk permissions.
+
+Log rotation.
+
+Outputs:
+
+“All systems nominal” or detailed remediation suggestions.
+
+State Transition:
+
+Any State ──doctor──> Validated
+
+🧭 9. System-Level Data Flows
+Data Flow Diagram
+User
+ ├─> CLI (clap) or UI (egui)
+ │     └─> mtmf_core::commands
+ │           ├─> config::load()
+ │           ├─> storage::upload()
+ │           ├─> metadata::build()
+ │           ├─> flow::sign_tx()
+ │           ├─> flow::submit_tx()
+ │           └─> utils::poll_seal()
+ │
+ └─< status + outputs (TxID, URLs)
+
+Artifact Flow
+Artifact	Source	Stored	Usage
+Config.toml	init wizard	~/.config/mtmf/	profile mgmt
+Keys (.enc)	key mgr	~/.config/mtmf/keys	signing
+Media file	user	local / IPFS	NFT image
+Metadata.json	builder	temp dir	mint tx arg
+Logs	tracing	local logs	debugging
+Cache index	mint task	~/.local/share/mtmf/cache.json	deduplication
+⚙️ 10. Runtime Subsystems & Event Loops
+Subsystem	Technology	Description
+Command Runtime	clap + tokio	Command parsing + async orchestration
+UI Runtime	eframe (egui)	Immediate-mode event loop
+Networking	reqwest, tonic	HTTP + gRPC I/O
+Crypto Engine	ring, p256, sha3	Keygen, signing, hash
+Storage Engine	sled or serde_json	Persistent metadata cache
+Telemetry	tracing	Structured log & metrics sink
+Async Tasks	tokio::spawn + Semaphore	Concurrent uploads/mints
+🔐 11. Security Lifecycle
+
+Key Generation: ECDSA_P256 keypair → AES-GCM encryption.
+
+Secrets Isolation: Key file separated from config file.
+
+In-Memory Handling: Sensitive data zeroized after use.
+
+Transaction Signing: Local only, never sent to server (self mode).
+
+Network Security: All requests over HTTPS/TLS 1.3.
+
+Integrity Checks: SHA3_256 on file uploads + Flow tx payloads.
+
+Optional Passphrase: Unlock CLI session (mtmf unlock).
+
+🚀 12. Performance Lifecycle
+Phase	Performance Strategy
+Upload	Streaming multipart upload + dedup cache
+Mint	Parallel mint queue (Tokio bounded tasks)
+Config Load	Lazy deserialization; memoized in static OnceCell
+Signing	Use preallocated buffers; no heap copies
+Polling	Adaptive interval (1s → 5s → 10s)
+UI	EgUI diff rendering; minimal reallocation
+Logging	Non-blocking async writer (tracing_appender::non_blocking)
+🧮 13. Example End-to-End Sequence
+User runs:
+$ mtmf mint skelly.png --name "Skelly #1" --to 0xabc --royalty 0xme:250 --network testnet
+
+→ CLI: parse args
+→ Load profile
+→ Hash + upload image to IPFS
+→ Build metadata
+→ Build Cadence mint transaction
+→ Sign tx (ECDSA_P256 + SHA3_256)
+→ Submit to Flow Access API
+→ Poll seal event
+→ Receive token ID
+→ Log + print success
+→ Save record in cache
+→ Exit with code 0
+
+
+Output:
+
+✅ Mint successful!
+Token ID: 42
+Tx: a1b2c3d4
+View: https://testnet.flowscan.org/tx/a1b2c3d4
+
+📊 14. Lifecycle Summary Table
+Stage	Trigger	Output	State Transition
+0	Install	Binary in PATH	Not Initialized
+1	Init	Config.toml	Initialized
+2	Config Edit	Valid profile	Ready
+3	Upload	Media URL	Uploaded
+4	Metadata Build	JSON payload	Metadata Ready
+5	Sign Tx	Transaction bytes	Transaction Built
+6	Submit Tx	TxID	Pending
+7	Seal	Token ID	Minted
+8	Doctor	OK	Validated
+🧭 15. Optional Extensions
+
+Batch Mint Worker (daemon mode): watches directory for new media → auto-mints.
+
+WebSocket Event Listener: subscribe to Flow mint events (live feedback).
+
+Telemetry Collector: optional remote event aggregation.
+
+Plugin Loader: user-defined upload/mint hooks.
+
+✅ Conclusion
+
+This lifecycle defines MintThisMF as a robust, modular, and correct-by-construction Rust minting system — covering every stage from installation to mint confirmation and diagnostics, both in CLI and GUI mode.
+
+Would you like me to follow this by drafting a visual system sequence diagram (PlantUML-style or Mermaid) showing the exact call flow between CLI → Core → Storage → Flow → UI events? It’d help visualize runtime orchestration.
